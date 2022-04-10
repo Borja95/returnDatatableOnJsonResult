@@ -1,0 +1,120 @@
+//MODELO
+public class Respuesta_Json
+    {
+        public int Codigo { get; set; }
+        public string Mensaje_Respuesta { get; set; }
+        public List<Dictionary<string, object>> Archivos { get; set; }
+    }
+
+
+//CONTROLADOR 
+
+//Método para consultar archivos, aquí mando llamar el método necesario para hacer la conversión. 
+ [HttpGet]
+        public JsonResult ConsultarArchivos()
+        {
+            Respuesta_Json respuesta = new Respuesta_Json();
+            DataTable dt = new DataTable();
+
+            try
+            {
+                string connStr = ConfigurationManager.ConnectionStrings["Model1"].ConnectionString;
+                string consulta = "select Id, Nombre_Archivo, Extension, Formato, Fecha_Entrada, Tamanio from Archivos";
+
+                using (SqlConnection cnn = new SqlConnection(connStr))
+                {
+                    using (SqlCommand cmd = new SqlCommand(consulta, cnn))
+                    {
+                        cmd.CommandType = CommandType.Text;
+                        cnn.Open();
+                        dt.Load(cmd.ExecuteReader());
+                        cnn.Close();
+                        cnn.Dispose();
+                    }
+                }
+                respuesta.Codigo = 1;
+                respuesta.Mensaje_Respuesta = "Se realizó la consulta a la base de datos correctamente";
+                respuesta.Archivos = DataTableToDictionary(dt);
+            }
+            catch (Exception ex)
+            {
+                respuesta.Codigo = 0;
+                respuesta.Mensaje_Respuesta = ex.ToString();
+            }
+
+            return Json(respuesta, JsonRequestBehavior.AllowGet);
+        }
+
+//Método para convertir Datatable a List<Dictionary<string, object>>
+public List<Dictionary<string, object>> DataTableToDictionary(DataTable dt)
+        {
+            List<Dictionary<string, object>> filas = new List<Dictionary<string, object>>();
+            Dictionary<string, object> fila;
+            foreach (DataRow row in dt.Rows)
+            {
+                fila = new Dictionary<string, object>();
+                foreach (DataColumn col in dt.Columns)
+                {
+                    fila.Add(col.ColumnName, row[col]);
+                }
+                filas.Add(fila);
+            }
+
+            return filas;
+        }
+
+
+//JAVASCRIPT
+
+//Petición Ajax mandar llamar método del controlador
+function obtenerArchivos() {
+
+    $.ajax({
+        type: "GET",
+        url: "/Home/ConsultarArchivos",
+        beforeSend: function () {
+            $("#bodyTablaDescargar").html("<tr><td colspan='5'>CARGANDO ARCHIVOS...</td></tr>");
+        },
+        complete: function () {
+
+        },
+        success: function (response) {
+            var respuesta = response;
+            console.log(respuesta);
+
+            
+            if (respuesta.Codigo == 1) {
+                alert("Éxito");
+            } else {
+                alert("No ha retornado de forma correcta");
+            }
+            
+
+
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            console.log(jqXHR);
+            console.log(textStatus);
+            console.log(errorThrown);
+            alert("Ocurrió un error al verificar los CFDI(s): " + jqXHR);
+        }
+    });
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
